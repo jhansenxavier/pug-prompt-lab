@@ -1,6 +1,8 @@
 # 🐾 Pug Prompt Lab
 
-Protótipo de **atendimento ao cliente por chat com IA** para o pet shop fictício *Bruce's Pug*, rodando em **modo debug** para comparar **5 variações estruturais de system prompt**.
+Protótipo de **atendimento ao cliente por chat com IA** para o pet shop fictício *Bruce's Pug*, rodando em **modo debug** para comparar **5 variações estruturais de system prompt**, mais uma estrutura recomendada construída a partir dos resultados.
+
+📄 **Relatório analítico com resultados, análise e recomendação: [RELATORIO.md](RELATORIO.md)**
 
 Projeto desenvolvido para a disciplina **Engenharia de Inteligência Artificial**.
 
@@ -15,17 +17,36 @@ Avaliar como a estrutura do system prompt muda a resposta do modelo para a **mes
 | **Saída estruturada** | Formato fixo de resposta: Categoria, Resposta, Valores e Próximo passo. |
 | **Few-shot** | Três exemplos de pergunta e resposta para o modelo imitar o estilo. |
 | **Restrições e políticas** | Regras explícitas: escopo, não inventar preços, não diagnosticar, não dar descontos, limite de palavras, proteção contra *prompt injection*. |
+| **Recomendado** | Híbrido criado a partir dos resultados: papel institucional, roteiro de decisão por tipo de mensagem, regras e exemplos de estilo. Veja o [relatório](RELATORIO.md). |
 
 ## Funcionalidades
 
 - **Seletor de system prompt**: escolha o tipo antes de enviar a pergunta.
-- **Comparar os 5**: envia a mesma pergunta com os 5 prompts e mostra as respostas em sequência.
+- **Comparar todos**: envia a mesma pergunta com todos os prompts e mostra as respostas em sequência.
 - **Console de debug**:
   - **Chamada**: system prompt e mensagens enviadas, latência, provedor, modelo e tokens de entrada e saída.
   - **Editar prompt**: altere o texto de cada prompt na hora e restaure o padrão quando quiser.
   - **Métricas**: média de latência, palavras e tokens por tipo de prompt.
 - **Perguntas de teste prontas**, incluindo casos difíceis: pedido de desconto, sintoma de saúde, assunto fora do escopo e tentativa de extrair o prompt.
 - **Histórico opcional**: por padrão cada pergunta vai sozinha, para a comparação ser justa. Marque *Enviar histórico da conversa* para manter o contexto.
+
+## Experimento automatizado
+
+Além da interface, o projeto tem um experimento em linha de comando que roda **todas as perguntas do dataset com todos os prompts, várias vezes**, verifica cada resposta e gera as tabelas comparativas.
+
+```bash
+npm run experimento                  # 6 prompts × 27 perguntas × 3 repetições + avaliador
+npm run experimento -- --reps=5      # mais repetições
+npm run experimento -- --tipos=simples,recomendado --sem-juiz
+npm run experimento:ca               # se a rede intercepta HTTPS (veja Problemas comuns)
+```
+
+- **Dataset:** 27 perguntas de clientes em 8 categorias (FAQ, cálculo, informação ausente, saúde, política comercial, fora do escopo, segurança e reclamação). Cada uma tem o comportamento esperado e verificações objetivas. As perguntas Q22–Q27 formam um conjunto de validação que não foi usado no desenho do prompt recomendado.
+- **Verificações automáticas:** o que a resposta precisa conter e o que não pode conter, mais a detecção de preço ou telefone inventado.
+- **Avaliador às cegas:** um LLM com temperatura 0 dá notas de 1 a 5 para clareza, completude, tom, segurança e fidelidade, sem saber qual prompt gerou a resposta.
+- **Saída** em `experimento/resultados/`: `RESULTADOS.md` (tabelas), `RESPOSTAS.md` (todas as respostas) e `execucao-*.json` (dados brutos).
+
+Para regerar as tabelas de uma execução salva, sem chamar a API: `node experimento/tabelas.mjs experimento/resultados/execucao-XXXX.json`.
 
 ## Provedores de IA suportados
 
@@ -144,10 +165,19 @@ Os nomes de modelo mudam com frequência. Se aparecer erro de "model not found",
 ```
 pug-prompt-lab/
 ├── public/
-│   └── index.html     # Interface: chat, seletor de prompts, console de debug e os 5 prompts
-├── server.js          # Servidor HTTP e adaptadores de cada provedor de IA
-├── .env.example       # Modelo de configuração
-├── .gitignore
+│   ├── index.html         # Interface: chat, seletor de prompts e console de debug
+│   └── prompts.js         # Os system prompts e os dados da loja (usados pela página e pelo experimento)
+├── lib/
+│   └── ai.js              # Adaptadores de cada provedor de IA
+├── experimento/
+│   ├── perguntas.mjs      # Dataset: perguntas, comportamento esperado e verificações
+│   ├── verificacoes.mjs   # Verificações automáticas (inclui detecção de preço/telefone inventado)
+│   ├── rodar.mjs          # Executa o experimento e o avaliador às cegas
+│   ├── tabelas.mjs        # Gera RESULTADOS.md e RESPOSTAS.md
+│   └── resultados/        # Execuções salvas
+├── server.js              # Servidor HTTP
+├── RELATORIO.md           # Relatório analítico
+├── .env.example
 ├── package.json
 └── README.md
 ```
@@ -163,9 +193,9 @@ server.js  ──►  adaptador do provedor  ──►  API de IA (Anthropic / O
    ◄── { text, usage, provider, model, ms }
 ```
 
-- Os **5 system prompts** e os **dados da loja** ficam em `public/index.html`, nas constantes `TYPES` e `INFO`. O marcador `{{INFO_LOJA}}` é trocado pelos dados da loja antes do envio.
+- Os **system prompts** e os **dados da loja** ficam em `public/prompts.js`, nas constantes `TYPES` e `INFO`. O marcador `{{INFO_LOJA}}` é trocado pelos dados da loja antes do envio.
 - O system prompt vai pelo campo próprio de cada API: `system` na Anthropic, mensagem `role: "system"` na OpenAI e `systemInstruction` no Gemini.
-- Para incluir outro provedor, basta adicionar uma função em `providers` no `server.js` que receba `{ system, messages }` e devolva `{ text, usage }`.
+- Para incluir outro provedor, basta adicionar uma função em `providers` no `lib/ai.js` que receba `{ system, messages }` e devolva `{ text, usage }`.
 
 ## Problemas comuns
 

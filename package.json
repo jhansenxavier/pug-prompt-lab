@@ -1,12 +1,14 @@
 {
   "name": "pug-prompt-lab",
   "version": "1.0.0",
-  "description": "Chat de atendimento do pet shop Bruce's Pug em modo debug para comparar 5 estruturas de system prompt.",
+  "description": "Chat de atendimento do pet shop Bruce's Pug em modo debug para comparar estruturas de system prompt, com experimento automatizado e relatório.",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node --env-file=.env server.js",
-    "start:ca": "node --use-system-ca --env-file=.env server.js"
+    "start:ca": "node --use-system-ca --env-file=.env server.js",
+    "experimento": "node --env-file=.env experimento/rodar.mjs",
+    "experimento:ca": "node --use-system-ca --env-file=.env experimento/rodar.mjs"
   },
   "engines": {
     "node": ">=20.6"
